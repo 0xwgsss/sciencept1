@@ -1,0 +1,1120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>pt ni siya dowg</title>
+<script src="https://unpkg.com/three@0.128.0/build/three.min.js"></script>
+<script src="https://unpkg.com/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<style>
+  :root{
+    --ink:#1c2b24;
+    --paper:#f6f1e7;
+    --blue:#2f6fed;
+    --blue-deep:#123a8f;
+    --green:#20b26c;
+    --green-deep:#0f7a48;
+    --yellow:#ffd400;
+    --yellow-deep:#f5b700;
+    --white:#ffffff;
+    --off-white:#f3f8f5;
+    --cold:#3fa9f5;
+    --warm:#ff8a3d;
+    --hot:#ff4b3e;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;height:100%;}
+  body{
+    font-family: 'Courier New', ui-monospace, monospace;
+    background:
+      radial-gradient(circle at 12% 14%, rgba(32,178,108,0.20), transparent 32%),
+      radial-gradient(circle at 90% 10%, rgba(255,212,0,0.22), transparent 30%),
+      radial-gradient(circle at 85% 85%, rgba(47,111,237,0.22), transparent 34%),
+      linear-gradient(155deg, var(--off-white) 0%, #eaf4ef 45%, #e6eefc 100%);
+    background-attachment: fixed;
+    color:var(--ink);
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    padding:28px 16px 40px;
+  }
+
+  /* ===== MASTER BAR ===== */
+  .master-bar{
+    position:sticky; top:10px; z-index:80;
+    width:100%; max-width:980px;
+    background:linear-gradient(120deg, var(--blue), var(--green));
+    border:4px solid var(--yellow);
+    border-radius:16px;
+    box-shadow:0 14px 30px rgba(18,58,143,0.3);
+    padding:12px 18px;
+    margin-bottom:22px;
+    display:flex;
+    align-items:center;
+    gap:14px;
+  }
+  .master-bar .goggle{
+    width:34px; height:34px; border-radius:50%;
+    background:radial-gradient(circle at 35% 32%, #ffffff, #eaf4ef 55%, #b9c9c1 100%);
+    border:4px solid var(--white);
+    flex-shrink:0;
+    box-shadow:0 0 0 3px var(--yellow-deep);
+  }
+  .master-bar label{
+    font-weight:700; letter-spacing:0.06em; text-transform:uppercase;
+    font-size:0.75rem; color:var(--white);
+    flex-shrink:0;
+  }
+  .master-bar input[type=range]{
+    flex:1; accent-color:var(--yellow); height:8px;
+  }
+  .master-bar .pct{
+    width:64px; text-align:right; font-weight:800; font-size:1.05rem;
+    color:var(--yellow);
+  }
+
+  h1{
+    font-family: Georgia, 'Times New Roman', serif;
+    font-weight:700;
+    font-size:1.5rem;
+    letter-spacing:0.02em;
+    margin:0 0 2px;
+    color:var(--blue-deep);
+    text-shadow: 0 2px 0 rgba(255,255,255,0.6);
+  }
+  .subtitle{
+    font-size:0.78rem;
+    letter-spacing:0.12em;
+    text-transform:uppercase;
+    color:var(--green-deep);
+    margin-bottom:22px;
+    font-weight:700;
+  }
+
+  /* ===== SIM 1 STAGE ===== */
+  .stage{
+    width:100%;
+    max-width:560px;
+    background:linear-gradient(180deg,#f2f7f4,#dfeee6);
+    border:4px solid var(--blue);
+    border-radius:18px;
+    box-shadow: 0 22px 48px rgba(18,58,143,0.22), inset 0 0 0 6px var(--yellow);
+    overflow:hidden;
+    position:relative;
+  }
+  .therm-room{
+    position:relative;
+    width:100%;
+    aspect-ratio: 4 / 3;
+    overflow:hidden;
+    background:linear-gradient(180deg,#3a4a63,#5a6b82);
+    transition: background 0.6s ease;
+  }
+  .heatwall{
+    position:absolute; inset:0;
+    background: radial-gradient(ellipse at 50% 30%, rgba(255,75,62,0.35), rgba(255,75,62,0) 65%);
+    opacity:0;
+    transition: opacity 0.6s ease;
+    pointer-events:none;
+  }
+  .fixture{
+    position:absolute;
+    top:6%; left:50%;
+    transform:translateX(-50%);
+    width:10px; height:20%;
+    background:#3a3226;
+  }
+  .bulb{
+    position:absolute;
+    top:26%; left:50%;
+    transform:translateX(-50%) scale(1);
+    width:64px; height:64px;
+    border-radius:50%;
+    background: radial-gradient(circle at 35% 30%, #fffdf3, var(--yellow) 55%, #e0a000 100%);
+    box-shadow: 0 0 40px 18px rgba(255,216,115,0.75), 0 0 90px 40px rgba(255,216,115,0.28);
+    transition: opacity 0.4s ease, box-shadow 0.4s ease, transform 0.4s ease;
+  }
+  .roomglow{
+    position:absolute; inset:0;
+    background: radial-gradient(ellipse at 50% 30%, rgba(255,216,115,0.35), rgba(255,216,115,0) 60%);
+    opacity:1;
+    transition: opacity 0.4s ease;
+    pointer-events:none;
+  }
+  .heatwaves{
+    position:absolute;
+    top:14%; left:50%;
+    transform:translateX(-50%);
+    width:90px; height:14%;
+    opacity:0;
+    transition: opacity 0.5s ease;
+    pointer-events:none;
+    background:
+      repeating-linear-gradient(0deg, transparent 0 6px, rgba(255,255,255,0.35) 6px 8px);
+    filter:blur(2px);
+    animation: waver 0.6s ease-in-out infinite alternate;
+  }
+  @keyframes waver{ from{ transform:translateX(-50%) skewX(-4deg);} to{ transform:translateX(-50%) skewX(4deg);} }
+
+  .thermo{
+    position:absolute;
+    right:8%; bottom:8%;
+    width:16%; height:70%;
+    display:flex; flex-direction:column; align-items:center;
+  }
+  .thermo-tube{
+    position:relative;
+    width:14px; flex:1;
+    background:#efe6d3;
+    border:3px solid var(--blue);
+    border-radius:10px 10px 0 0;
+    overflow:hidden;
+    box-shadow: inset 2px 0 3px rgba(255,255,255,0.5);
+  }
+  .thermo-fill{
+    position:absolute; left:0; right:0; bottom:0;
+    height:38%;
+    background:linear-gradient(180deg, var(--hot), var(--warm));
+    transition: height 0.5s ease, background 0.5s ease;
+  }
+  .thermo-mark{
+    position:absolute; left:-4px; width:22px; height:2px;
+    background:rgba(18,58,143,0.35);
+  }
+  .thermo-bulb{
+    width:26px; height:26px;
+    border-radius:50%;
+    background:linear-gradient(180deg, var(--hot), var(--warm));
+    border:3px solid var(--blue);
+    margin-top:-3px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.2), inset -3px -3px 6px rgba(0,0,0,0.15), inset 3px 3px 6px rgba(255,255,255,0.35);
+  }
+
+  /* ===== PANEL ===== */
+  .panel{
+    background:linear-gradient(165deg, var(--blue), var(--green-deep));
+    border-top:4px solid var(--yellow);
+    padding:16px 18px 18px;
+    color:var(--white);
+  }
+  .stat-grid{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:10px;
+    margin-bottom:12px;
+  }
+  .stat-box{
+    background:rgba(255,255,255,0.96);
+    border:2px solid var(--yellow);
+    border-radius:10px;
+    padding:9px 6px;
+    text-align:center;
+    box-shadow:0 4px 10px rgba(18,58,143,0.14);
+  }
+  .stat-label{
+    display:block;
+    font-size:0.62rem;
+    text-transform:uppercase;
+    letter-spacing:0.06em;
+    color:var(--blue-deep);
+    margin-bottom:4px;
+    font-weight:700;
+  }
+  .stat-value{
+    display:block;
+    font-size:1.05rem;
+    font-weight:800;
+    color:var(--green-deep);
+  }
+  .status{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    background:rgba(255,255,255,0.96);
+    border:2px solid var(--yellow);
+    border-radius:8px;
+    padding:10px 14px;
+    font-size:0.82rem;
+    margin-bottom:12px;
+    color:var(--ink);
+    box-shadow:0 4px 10px rgba(18,58,143,0.14);
+  }
+  .status .left{ display:flex; align-items:center; gap:8px; }
+  .dot{
+    width:12px; height:12px;
+    border-radius:50%;
+    background:#4caf50;
+    box-shadow:0 0 8px 2px rgba(76,175,80,0.6);
+    transition: background 0.3s ease, box-shadow 0.3s ease;
+  }
+  .dot.warn{ background:var(--warm); box-shadow:0 0 10px 3px rgba(255,138,61,0.7); }
+  .dot.danger{ background:var(--hot); box-shadow:0 0 10px 3px rgba(255,75,62,0.8); }
+  .badge{
+    font-weight:700; letter-spacing:0.04em;
+    padding:5px 12px; border-radius:20px; font-size:0.7rem;
+    background:var(--yellow); color:var(--blue-deep);
+    box-shadow:0 2px 6px rgba(0,0,0,0.15);
+  }
+  .warning-banner{
+    background:#fff1ef; border:2px solid var(--hot); color:#a3271b;
+    border-radius:6px; padding:8px 12px; font-size:0.74rem;
+    text-align:center; margin-bottom:12px; display:none; font-weight:700;
+    animation: pulseWarn 1s ease-in-out infinite;
+  }
+  .warning-banner.show{ display:block; }
+  @keyframes pulseWarn{ 0%,100%{opacity:1;} 50%{opacity:0.6;} }
+
+  .mode-toggle{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px; }
+  .mode-btn{
+    font-family:'Courier New',monospace; font-size:0.72rem;
+    background:rgba(255,255,255,0.94); color:var(--blue-deep); border:2px solid var(--yellow);
+    padding:8px 12px; border-radius:9px; cursor:pointer; flex:1; min-width:120px;
+    font-weight:700;
+    box-shadow:0 3px 8px rgba(18,58,143,0.14);
+    transition:all .15s ease;
+  }
+  .mode-btn.active{ background:var(--yellow); color:var(--blue-deep); }
+  .mode-btn:hover{ transform:translateY(-1px); box-shadow:0 5px 12px rgba(18,58,143,0.2); }
+
+  .log{ font-size:0.72rem; color:#eaf4ef; text-align:center; line-height:1.5; }
+
+  footer{
+    margin-top:20px;
+    font-size:0.7rem;
+    color:var(--blue-deep);
+    font-weight:600;
+    text-align:center;
+    max-width:560px;
+    line-height:1.6;
+  }
+
+  /* ===== GRAPH ===== */
+  .graph-card{
+    width:100%; max-width:980px;
+    background:linear-gradient(165deg, var(--blue-deep), var(--green-deep));
+    border:3px solid var(--yellow);
+    border-radius:18px;
+    padding:16px 18px;
+    margin-top:26px;
+    box-shadow:0 18px 40px rgba(18,58,143,0.22);
+  }
+  .graph-card h2{
+    font-family:'IBM Plex Mono',monospace; font-size:0.9rem;
+    color:var(--yellow); margin:0 0 10px;
+  }
+  #graphCanvas{ width:100%; height:220px; display:block; background:#ffffff; border-radius:8px; }
+  .graph-legend{ display:flex; gap:18px; margin-top:8px; font-size:0.72rem; color:var(--white); }
+  .leg::before{ content:"●"; margin-right:5px; }
+  .leg.temp::before{ color:var(--hot); }
+  .leg.bright::before{ color:var(--yellow); }
+
+  /* ===== 3D MATERIALS LAB (reused pattern) ===== */
+  .lab-wrap{ width:100%; max-width:980px; margin-top:26px; font-family:'Inter',sans-serif; }
+  .lab-wrap *{ box-sizing:border-box; }
+  .lab-mono{ font-family:'IBM Plex Mono',monospace; }
+  .lab-header{
+    background:linear-gradient(120deg, var(--blue-deep), var(--green-deep));
+    border:3px solid var(--yellow);
+    border-radius:18px;
+    padding:14px 18px;
+    box-shadow:0 18px 40px rgba(18,58,143,0.22);
+  }
+  .lab-header h2{ font-family:'IBM Plex Mono',monospace; font-size:1.05rem; color:var(--yellow); margin:0 0 6px; }
+  .lab-header p{ margin:0; color:#eaf4ef; font-size:0.82rem; line-height:1.5; max-width:640px; }
+
+  .lab-env{
+    position:relative; border-radius:12px; overflow:hidden; height:74px;
+    border:1px solid #00000055; transition:background 1s ease; margin:12px 0;
+    background:linear-gradient(180deg,#3fa9f5 0%,#cfe8ee 60%,#e8ddb8 100%);
+  }
+  .lab-celestial{
+    position:absolute; top:24px; left:20px; width:24px; height:24px; border-radius:50%;
+    background:radial-gradient(circle at 35% 35%,#fff7d6,#ff8a3d);
+    box-shadow:0 0 22px 5px #ff8a3d99;
+    transition:all 0.6s ease;
+  }
+  .lab-envLabel{
+    position:absolute; top:10px; right:14px; font-family:'IBM Plex Mono',monospace;
+    font-size:0.68rem; color:#ffffffcc; background:#00000033; padding:4px 9px; border-radius:20px;
+  }
+  .lab-envTier{
+    position:absolute; bottom:8px; left:20px; font-family:'IBM Plex Mono',monospace;
+    font-size:0.66rem; color:#3a2c1fcc; background:#ffffff55; padding:3px 8px; border-radius:20px;
+  }
+
+  .lab-controls{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:14px; }
+  .lab-slider-row{
+    display:flex; align-items:center; gap:10px;
+    background:#1c1512; border:1px solid #52402f; border-radius:8px;
+    padding:8px 14px; flex:1; min-width:220px;
+  }
+  .lab-slider-row label{ font-family:'IBM Plex Mono',monospace; font-size:0.7rem; color:#cbb98f; text-transform:uppercase; letter-spacing:0.06em; }
+  .lab-slider-row input[type=range]{ flex:1; accent-color:#ff8a3d; }
+  .lab-slider-row span{ font-family:'IBM Plex Mono',monospace; font-size:0.85rem; color:#ffcf5c; width:52px; text-align:right; font-weight:700; }
+  .lab-wrap button{
+    font-family:'IBM Plex Mono',monospace; font-size:0.74rem;
+    background:#1c1512; color:#f3ecd9; border:1px solid #52402f;
+    padding:9px 14px; border-radius:8px; cursor:pointer; transition:all .15s ease;
+  }
+  .lab-wrap button:hover{ border-color:#ffcf5c; color:#ffcf5c; }
+  .lab-wrap button:active{ transform:translateY(1px); }
+  .lab-wrap button.primary{ background:#4a2e18; border-color:#8a5a2c; color:#ffcf5c; }
+  .lab-wrap button:disabled{ opacity:0.35; cursor:not-allowed; }
+
+  .lab-stage{
+    position:relative; border-radius:14px; overflow:hidden; border:1px solid #00000055;
+    background:linear-gradient(180deg,#3e2c23,#2a1d17); margin-bottom:16px;
+  }
+  #labCanvas3d{ width:100%; height:420px; display:block; cursor:grab; }
+  #labCanvas3d:active{ cursor:grabbing; }
+  .lab-hint{
+    position:absolute; top:10px; left:12px; font-family:'IBM Plex Mono',monospace; font-size:0.66rem;
+    color:#e8dcc233; background:#00000055; padding:5px 10px; border-radius:20px; pointer-events:none;
+  }
+  .lab-infoPanel{
+    position:absolute; bottom:14px; left:14px; right:14px; max-width:420px;
+    background:#161009ee; border:1px solid #ffcf5c; border-radius:10px;
+    padding:14px 16px; transform:translateY(140%); transition:transform .3s ease;
+  }
+  .lab-infoPanel.show{ transform:translateY(0); }
+  .lab-infoPanel h3{ margin:0 0 6px; font-family:'IBM Plex Mono',monospace; color:#ffcf5c; font-size:0.88rem; }
+  .lab-infoPanel p{ margin:0 0 8px; font-size:0.78rem; line-height:1.5; color:#e6dcc6; }
+  .lab-infoLabel{ margin:0 0 3px !important; font-size:0.64rem; text-transform:uppercase; letter-spacing:0.08em; color:#ffcf5c !important; font-family:'IBM Plex Mono',monospace; }
+  .lab-x{ position:absolute; top:8px; right:10px; cursor:pointer; color:#a3927a; font-family:monospace; }
+
+  .lab-flowcard{ background:#1c1512; border:1px solid #40302640; border-radius:12px; padding:18px 20px; }
+  .lab-flowcard h2{ font-family:'IBM Plex Mono',monospace; font-size:0.74rem; text-transform:uppercase; letter-spacing:0.08em; color:#cbb98f; margin:0 0 16px; }
+  .lab-track{ display:flex; align-items:flex-start; gap:0; overflow-x:auto; padding-bottom:6px; }
+  .lab-node{ display:flex; flex-direction:column; align-items:center; flex:none; width:88px; text-align:center; }
+  .lab-dot{ width:18px; height:18px; border-radius:50%; background:#2b241a; border:2px solid #52402f; margin-bottom:8px; transition:all .5s ease; position:relative; }
+  .lab-node.done .lab-dot{ background:#3a6ea8; border-color:#4f8ac9; box-shadow:0 0 0 4px #3a6ea822; }
+  .lab-node.active .lab-dot{ background:#ff8a3d; border-color:#ffb87a; box-shadow:0 0 0 6px #ff8a3d33; animation:labPulseDot 1s ease-in-out infinite; }
+  @keyframes labPulseDot{ 0%,100%{ box-shadow:0 0 0 6px #ff8a3d33; } 50%{ box-shadow:0 0 0 11px #ff8a3d22; } }
+  .lab-node span{ font-family:'IBM Plex Mono',monospace; font-size:0.58rem; line-height:1.4; color:#a3927a; transition:color .5s ease; }
+  .lab-node.done span, .lab-node.active span{ color:#f3ecd9; }
+  .lab-connector{ flex:1; min-width:14px; height:2px; background:#3a2c1f; margin:8px -2px 0; transition:background .6s ease; }
+  .lab-connector.filled{ background:linear-gradient(90deg,#3a6ea8,#ff8a3d); }
+  .lab-caption{
+    font-family:'IBM Plex Mono',monospace; font-size:0.76rem; color:#e6dcc6;
+    background:#00000033; border-left:2px solid #ff8a3d; padding:10px 14px;
+    border-radius:0 8px 8px 0; margin:14px 0 16px; min-height:1.4em; transition:opacity .2s ease;
+  }
+  .lab-stats{ display:flex; gap:22px; flex-wrap:wrap; }
+  .lab-stat b{ display:block; font-family:'IBM Plex Mono',monospace; font-size:1.15rem; color:#ffcf5c; }
+  .lab-stat span{ font-size:0.68rem; color:#a3927a; }
+  .lab-footer{ text-align:center; margin-top:16px; font-size:0.68rem; color:#7a6a55; font-family:'IBM Plex Mono',monospace; }
+</style>
+</head>
+<body>
+
+  <div class="master-bar">
+    <div class="goggle"></div>
+    <label for="masterSlider">◐ HEAT ADJUSTER – SLIDE TO LEFT TO INCREASE HEAT, DO THE OPPOSITE FOR REDUCE HEAT</label>
+    <input type="range" id="masterSlider" min="20" max="90" value="38">
+    <span class="pct" id="masterPct">38°C</span>
+  </div>
+
+  <h1>HEAT WISE BULB</h1>
+  <div class="subtitle">"where safety is guaranteed"</div>
+
+  <div class="stage">
+    <div class="therm-room" id="thermRoom">
+      <div class="heatwall" id="heatwall"></div>
+      <div class="fixture"></div>
+      <div class="bulb" id="bulb"></div>
+      <div class="roomglow" id="roomglow"></div>
+      <div class="heatwaves" id="heatwaves"></div>
+      <div class="thermo" id="thermo">
+        <div class="thermo-tube">
+          <div class="thermo-fill" id="thermoFill"></div>
+          <div class="thermo-mark" style="bottom:29%"></div>
+          <div class="thermo-mark" style="bottom:43%"></div>
+          <div class="thermo-mark" style="bottom:57%"></div>
+          <div class="thermo-mark" style="bottom:71%"></div>
+        </div>
+        <div class="thermo-bulb"></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="stat-grid">
+        <div class="stat-box"><span class="stat-label">Temperature</span><span class="stat-value" id="tempVal">38°C</span></div>
+        <div class="stat-box"><span class="stat-label">Brightness</span><span class="stat-value" id="brightVal">100%</span></div>
+        <div class="stat-box"><span class="stat-label">Power</span><span class="stat-value" id="powerVal">60.0 W</span></div>
+      </div>
+
+      <div class="warning-banner" id="warningBanner">▲ OVERHEATING RISK — bulb held at full power in Normal Mode</div>
+
+      <div class="status">
+        <div class="left">
+          <span class="dot" id="dot"></span>
+          <span id="statusText">NORMAL — full brightness</span>
+        </div>
+        <span class="badge" id="modeBadge">SMART MODE</span>
+      </div>
+
+      <div class="mode-toggle">
+        <button id="btnSmart" class="mode-btn active">◆ Smart Mode</button>
+        <button id="btnNormal" class="mode-btn">▲ Normal Mode</button>
+        <button id="btnDemo">▷ Run Heat Cycle Demo</button>
+      </div>
+
+      <div class="log" id="log">Move the heat slider at the top to change the bulb's temperature.</div>
+    </div>
+  </div>
+
+  <footer>
+    
+  </footer>
+
+  <div class="graph-card">
+    <h2>◇ Temperature &amp; Brightness Over Time</h2>
+    <canvas id="graphCanvas" width="900" height="220"></canvas>
+    <div class="graph-legend">
+      <span class="leg temp">Temperature (°C)</span>
+      <span class="leg bright">Brightness (%)</span>
+    </div>
+  </div>
+
+  <div class="lab-wrap" id="labWrap">
+    <div class="lab-header">
+      <h2>◈ What's Inside: 3D Parts Used</h2>
+      <p>here, you can see what materials/parts is used for this project.</p>
+    </div>
+
+    <div class="lab-env" id="labEnv">
+      <div class="lab-celestial" id="labCelestial"></div>
+      <div class="lab-envTier" id="labEnvTier">● NORMAL</div>
+      <div class="lab-envLabel" id="labEnvLabel">TEMP: 38°C</div>
+    </div>
+
+    <div class="lab-controls">
+      <div class="lab-slider-row" style="display:none">
+        <label for="labSlider">Heat</label>
+        <input type="range" id="labSlider" min="20" max="90" value="38">
+        <span id="labPct">38°C</span>
+      </div>
+      <div class="lab-slider-row">
+        <label>Heat</label>
+        <span id="labPctVisible">38°C</span>
+        <span style="font-size:0.64rem;color:#a3927a;">synced to top slider ↑</span>
+      </div>
+      <button class="primary" id="btnLabAuto">▷ Run Auto Sweep</button>
+      <button id="btnLabReset">↺ Reset</button>
+    </div>
+
+    <div class="lab-stage">
+      <div class="lab-hint">drag = rotate · scroll = zoom · tap a part = inspect</div>
+      <div id="labCanvas3d"></div>
+      <div class="lab-infoPanel" id="labInfoPanel">
+        <span class="lab-x" id="labInfoClose">✕</span>
+        <h3 id="labInfoName">—</h3>
+        <p class="lab-infoLabel">Definition</p>
+        <p id="labInfoDef">—</p>
+        <p class="lab-infoLabel">Function</p>
+        <p id="labInfoFunc">—</p>
+      </div>
+    </div>
+
+    <div class="lab-flowcard">
+      <h2>Signal Path — Live Walkthrough</h2>
+      <div class="lab-track" id="labTrack">
+        <div class="lab-node" data-s="POWER"><div class="lab-dot"></div><span>Power<br>Supplied</span></div>
+        <div class="lab-connector" data-c="0"></div>
+        <div class="lab-node" data-s="SENSE"><div class="lab-dot"></div><span>Heat<br>Sensed</span></div>
+        <div class="lab-connector" data-c="1"></div>
+        <div class="lab-node" data-s="SIGNAL"><div class="lab-dot"></div><span>Signal to<br>Microcontroller</span></div>
+        <div class="lab-connector" data-c="2"></div>
+        <div class="lab-node" data-s="CHECK"><div class="lab-dot"></div><span>Comparing to<br>Thresholds</span></div>
+        <div class="lab-connector" data-c="3"></div>
+        <div class="lab-node" data-s="DECIDE"><div class="lab-dot"></div><span>Brightness<br>Decided</span></div>
+        <div class="lab-connector" data-c="4"></div>
+        <div class="lab-node" data-s="ADJUST"><div class="lab-dot"></div><span>Controller<br>Adjusts Power</span></div>
+        <div class="lab-connector" data-c="5"></div>
+        <div class="lab-node" data-s="BULB"><div class="lab-dot"></div><span>Bulb<br>Dims / Brightens</span></div>
+      </div>
+      <p class="lab-caption" id="labCaption">Waiting for a temperature reading…</p>
+      <div class="lab-stats">
+        <div class="lab-stat"><b id="labStatAdjust">0</b><span>brightness adjustments</span></div>
+        <div class="lab-stat"><b id="labStatSaved">0.0</b><span>W est. saved vs normal mode</span></div>
+        <div class="lab-stat"><b id="labStatProtect">0</b><span>overheat interventions</span></div>
+      </div>
+    </div>
+
+    <p class="lab-footer">....</p>
+  </div>
+
+<script>
+/* ============================================================
+   SIM 1 — thermal room + stats + graph
+   ============================================================ */
+const bulbEl     = document.getElementById('bulb');
+const roomglowEl = document.getElementById('roomglow');
+const heatwallEl = document.getElementById('heatwall');
+const heatwavesEl= document.getElementById('heatwaves');
+const thermoFill = document.getElementById('thermoFill');
+const tempValEl  = document.getElementById('tempVal');
+const brightValEl= document.getElementById('brightVal');
+const powerValEl = document.getElementById('powerVal');
+const dotEl      = document.getElementById('dot');
+const statusText = document.getElementById('statusText');
+const modeBadge  = document.getElementById('modeBadge');
+const warningBanner = document.getElementById('warningBanner');
+const logEl      = document.getElementById('log');
+const btnSmart   = document.getElementById('btnSmart');
+const btnNormal  = document.getElementById('btnNormal');
+const btnDemo    = document.getElementById('btnDemo');
+
+const TEMP_MIN = 20, TEMP_MAX = 90;
+const MAX_WATTS = 60;
+let smartMode = true;
+let lastTier = null;
+let history = []; // {temp, brightness}
+
+function brightnessFor(temp){
+  if(!smartMode) return 100;
+  if(temp < 40) return 100;
+  if(temp < 50) return 75;
+  if(temp < 60) return 50;
+  if(temp < 70) return 25;
+  return 5;
+}
+function tierFor(temp){
+  if(temp < 40) return {key:'ok',    label:'NORMAL — full brightness',              dot:'', };
+  if(temp < 50) return {key:'warm1', label:'THERMAL DIMMING ACTIVE (75%)',          dot:'warn'};
+  if(temp < 60) return {key:'warm2', label:'THERMAL DIMMING ACTIVE (50%)',          dot:'warn'};
+  if(temp < 70) return {key:'hot1',  label:'THERMAL DIMMING ACTIVE (25%)',          dot:'danger'};
+  return               {key:'hot2',  label:'THERMAL PROTECTION — MIN OUTPUT',       dot:'danger'};
+}
+
+function update(temp){
+  temp = Number(temp);
+  const brightness = brightnessFor(temp);
+  const power = +(MAX_WATTS * (brightness/100)).toFixed(1);
+  const tier = tierFor(temp);
+  const t = (temp - TEMP_MIN) / (TEMP_MAX - TEMP_MIN);
+
+  tempValEl.textContent = temp + '°C';
+  brightValEl.textContent = brightness + '%';
+  powerValEl.textContent = power.toFixed(1) + ' W';
+
+  // bulb visual
+  const scale = 0.7 + (brightness/100)*0.5;
+  bulbEl.style.opacity = Math.max(0.25, brightness/100);
+  bulbEl.style.transform = `translateX(-50%) scale(${scale})`;
+  bulbEl.style.boxShadow = `0 0 ${18+brightness*0.3}px ${6+brightness*0.12}px rgba(255,216,115,${0.25+brightness/160}), 0 0 ${40+brightness*0.5}px ${14+brightness*0.26}px rgba(255,216,115,${0.12+brightness/300})`;
+  roomglowEl.style.opacity = Math.max(0.08, brightness/100);
+
+  // heat visuals
+  heatwallEl.style.opacity = Math.max(0, (t-0.25))*1.3;
+  heatwavesEl.style.opacity = temp >= 55 ? Math.min(1,(temp-55)/25) : 0;
+  document.getElementById('thermRoom').style.background =
+    `linear-gradient(180deg, ${mixColor('#3a4a63','#7a2a1f',t)}, ${mixColor('#5a6b82','#c04a2a',t)})`;
+  thermoFill.style.height = (t*100) + '%';
+
+  // status
+  dotEl.className = 'dot' + (tier.dot ? (' '+tier.dot) : '');
+  statusText.textContent = tier.label;
+  modeBadge.textContent = smartMode ? 'SMART MODE' : 'NORMAL MODE';
+  warningBanner.classList.toggle('show', !smartMode && temp >= 70);
+
+  if(lastTier !== null && lastTier !== tier.key){
+    logEl.textContent = smartMode
+      ? `Temperature ${temp}°C → brightness stepped to ${brightness}% to protect the bulb.`
+      : `Temperature ${temp}°C — Normal Mode ignores it, brightness stays at 100%.`;
+  } else if(lastTier === null){
+    logEl.textContent = `Reading ${temp}°C — brightness is ${brightness}%.`;
+  }
+  lastTier = tier.key;
+
+  drawGraph();
+  return {temp, brightness, power};
+}
+
+function mixColor(c1,c2,t){
+  const p1=hexToRgb(c1), p2=hexToRgb(c2);
+  const r=Math.round(p1[0]+(p2[0]-p1[0])*t);
+  const g=Math.round(p1[1]+(p2[1]-p1[1])*t);
+  const b=Math.round(p1[2]+(p2[2]-p1[2])*t);
+  return `rgb(${r},${g},${b})`;
+}
+function hexToRgb(hex){
+  hex = hex.replace('#','');
+  return [parseInt(hex.substr(0,2),16), parseInt(hex.substr(2,2),16), parseInt(hex.substr(4,2),16)];
+}
+
+function pushHistory(temp, brightness){
+  history.push({temp, brightness});
+  if(history.length > 60) history.shift();
+}
+
+/* ---- graph ---- */
+const graphCanvas = document.getElementById('graphCanvas');
+const gctx = graphCanvas.getContext('2d');
+function drawGraph(){
+  const w = graphCanvas.width, h = graphCanvas.height;
+  gctx.clearRect(0,0,w,h);
+  // grid
+  gctx.strokeStyle = 'rgba(18,58,143,0.10)';
+  gctx.lineWidth = 1;
+  for(let i=0;i<=4;i++){
+    const y = (h/4)*i;
+    gctx.beginPath(); gctx.moveTo(0,y); gctx.lineTo(w,y); gctx.stroke();
+  }
+  if(history.length < 2) return;
+  const stepX = w / (Math.max(history.length,2)-1);
+
+  function plot(getVal, color){
+    gctx.strokeStyle = color;
+    gctx.lineWidth = 2.5;
+    gctx.beginPath();
+    history.forEach((pt,i)=>{
+      const v = getVal(pt);
+      const x = i*stepX;
+      const y = h - (v/100)*h;
+      if(i===0) gctx.moveTo(x,y); else gctx.lineTo(x,y);
+    });
+    gctx.stroke();
+  }
+  // temp scaled to 0-100 for shared axis
+  plot(pt => ((pt.temp-TEMP_MIN)/(TEMP_MAX-TEMP_MIN))*100, '#ff4b3e');
+  plot(pt => pt.brightness, '#FFD400');
+}
+
+/* ---- mode toggle ---- */
+btnSmart.addEventListener('click', ()=>{
+  smartMode = true;
+  btnSmart.classList.add('active'); btnNormal.classList.remove('active');
+  syncAll(masterSliderRef.value);
+});
+btnNormal.addEventListener('click', ()=>{
+  smartMode = false;
+  btnNormal.classList.add('active'); btnSmart.classList.remove('active');
+  syncAll(masterSliderRef.value);
+});
+
+/* ---- demo cycle ---- */
+let demoRunning = false;
+btnDemo.addEventListener('click', async ()=>{
+  if(demoRunning) return;
+  demoRunning = true; btnDemo.disabled = true;
+  const path = [38,45,52,58,65,72,80,72,65,58,50,42,38];
+  for(const t of path){
+    masterSliderRef.value = t;
+    syncAll(t);
+    labEvaluate(t);
+    await sleep(650);
+  }
+  btnDemo.disabled = false; demoRunning = false;
+});
+function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
+</script>
+
+<script>
+/* ============================================================
+   3D MATERIALS LAB — heat-driven Sensor / MCU / Dimmer / Bulb
+   ============================================================ */
+const labEnv = document.getElementById('labEnv');
+const labCelestial = document.getElementById('labCelestial');
+const labEnvLabel = document.getElementById('labEnvLabel');
+const labEnvTier = document.getElementById('labEnvTier');
+const labSlider = document.getElementById('labSlider');
+const labPct = document.getElementById('labPct');
+const btnLabAuto = document.getElementById('btnLabAuto');
+const btnLabReset = document.getElementById('btnLabReset');
+
+let labTempVal = 38;
+let labSwitches = 0, labSaved = 0, labProtects = 0;
+let labAutoRunning = false;
+
+const LAB_FLOW_ORDER = ['POWER','SENSE','SIGNAL','CHECK','DECIDE','ADJUST','BULB'];
+const labCaptionEl = document.getElementById('labCaption');
+
+function labSetFlow(key, caption){
+  const idx = LAB_FLOW_ORDER.indexOf(key);
+  LAB_FLOW_ORDER.forEach((k,i)=>{
+    const node = document.querySelector('.lab-node[data-s="'+k+'"]');
+    node.classList.remove('active','done');
+    if(idx<0) return;
+    if(i<idx) node.classList.add('done');
+    else if(i===idx) node.classList.add('active');
+  });
+  document.querySelectorAll('.lab-connector').forEach((c,i)=>{
+    c.classList.toggle('filled', idx>=0 && i<idx);
+  });
+  if(caption){ labCaptionEl.style.opacity=0; setTimeout(()=>{ labCaptionEl.textContent=caption; labCaptionEl.style.opacity=1; },120); }
+}
+function labResetFlow(msg){ labSetFlow(null, msg || 'Waiting for a temperature reading…'); }
+function labSleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
+
+function labTierOf(temp){
+  if(temp<40) return {label:'● NORMAL', brightness:100};
+  if(temp<50) return {label:'◐ DIMMING 75%', brightness:75};
+  if(temp<60) return {label:'◐ DIMMING 50%', brightness:50};
+  if(temp<70) return {label:'◑ DIMMING 25%', brightness:25};
+  return {label:'▲ PROTECTION MIN', brightness:5};
+}
+
+function labUpdateEnvVisual(temp){
+  const t = (temp-20)/(90-20);
+  const cold=[63,169,245], hot=[255,75,62];
+  const r=Math.round(cold[0]+(hot[0]-cold[0])*t);
+  const g=Math.round(cold[1]+(hot[1]-cold[1])*t);
+  const b=Math.round(cold[2]+(hot[2]-cold[2])*t);
+  labEnv.style.background = `linear-gradient(180deg, rgb(${r},${g},${b}) 0%, #cfe8ee ${40+t*20}%, #e8ddb8 100%)`;
+  labCelestial.style.top = (12 + t*24) + 'px';
+  labCelestial.style.boxShadow = `0 0 ${14+t*18}px ${4+t*6}px rgba(255,${138-t*80},${61-t*40},${0.5+t*0.4})`;
+  labEnvLabel.textContent = `TEMP: ${temp}°C`;
+  const tier = labTierOf(temp);
+  labEnvTier.textContent = tier.label;
+  labUpdateBulbBrightness(tier.brightness);
+}
+
+/* ---- evaluate: run the full signal path for a given temperature ---- */
+async function labEvaluate(temp){
+  labUpdateEnvVisual(temp);
+  const tier = labTierOf(temp);
+
+  labSetFlow('POWER', 'Power source supplies the circuit and the bulb.');
+  await labSleep(350);
+
+  labSetFlow('SENSE', `Temperature sensor reads ${temp}°C.`);
+  labSensorPingAnim();
+  await labSleep(450);
+
+  labFirePulse('sensorMcu', async ()=>{
+    labMcuBlink();
+    labSetFlow('SIGNAL', 'Reading travels along the wire to the microcontroller.');
+    await labSleep(450);
+    labSetFlow('CHECK', `Comparing ${temp}°C against the 40 / 50 / 60 / 70°C thresholds.`);
+    await labSleep(500);
+
+    labSetFlow('DECIDE', `Decision: brightness should be ${tier.brightness}%.`);
+    await labSleep(500);
+    labSetFlow('ADJUST', 'Microcontroller commands the brightness controller.');
+    labFirePulse('mcuDimmer', ()=>labFirePulse('dimmerLamp', ()=>{
+      labSetBrightness(tier.brightness);
+      labSwitches++;
+      document.getElementById('labStatAdjust').textContent = labSwitches;
+      const savedNow = MAX_WATTS_3D * (1 - tier.brightness/100);
+      if(savedNow > 0){
+        labSaved += savedNow*0.15;
+        document.getElementById('labStatSaved').textContent = labSaved.toFixed(1);
+      }
+      if(temp >= 70){
+        labProtects++;
+        document.getElementById('labStatProtect').textContent = labProtects;
+      }
+      labSetFlow('BULB', tier.brightness < 100
+        ? `Controller reduces power — bulb dims to ${tier.brightness}%.`
+        : 'Full power restored — bulb back to 100%.');
+      setTimeout(()=>labResetFlow(),1300);
+    }));
+  });
+}
+
+btnLabReset.addEventListener('click', ()=>{
+  labSwitches=0; labSaved=0; labProtects=0; labAutoRunning=false;
+  labTempVal=38; labSlider.value=38; labPct.textContent='38°C';
+  const vis = document.getElementById('labPctVisible'); if(vis) vis.textContent='38°C';
+  if(typeof masterSliderRef !== 'undefined'){ masterSliderRef.value=38; masterPctRef.textContent='38°C'; }
+  if(typeof update === 'function') update(38);
+  labUpdateEnvVisual(38);
+  document.getElementById('labStatAdjust').textContent='0';
+  document.getElementById('labStatSaved').textContent='0.0';
+  document.getElementById('labStatProtect').textContent='0';
+  labResetFlow('System reset — waiting for a temperature reading…');
+});
+
+btnLabAuto.addEventListener('click', async ()=>{
+  if(labAutoRunning) return;
+  labAutoRunning = true; btnLabAuto.disabled = true;
+  btnLabReset.click();
+  await labSleep(500);
+  const sweep = [45, 55, 65, 75, 60, 48, 35];
+  const vis = document.getElementById('labPctVisible');
+  for(const temp of sweep){
+    labTempVal = temp; labSlider.value = temp; labPct.textContent = temp + '°C';
+    if(vis) vis.textContent = temp + '°C';
+    if(typeof masterSliderRef !== 'undefined'){ masterSliderRef.value = temp; masterPctRef.textContent = temp + '°C'; }
+    if(typeof update === 'function') update(temp);
+    await labEvaluate(temp);
+    await labSleep(2400);
+  }
+  labResetFlow('Auto sweep finished — waiting for a temperature reading…');
+  btnLabAuto.disabled = false; labAutoRunning = false;
+});
+
+/* ============ THREE.JS SCENE ============ */
+const labContainer = document.getElementById('labCanvas3d');
+const labScene = new THREE.Scene();
+labScene.background = new THREE.Color(0x1a120d);
+labScene.fog = new THREE.Fog(0x1a120d, 12, 26);
+
+const labCamera = new THREE.PerspectiveCamera(42, labContainer.clientWidth/420, 0.1, 100);
+labCamera.position.set(2.6, 3.8, 7.4);
+
+const labRenderer = new THREE.WebGLRenderer({antialias:true});
+labRenderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+labRenderer.setSize(labContainer.clientWidth, 420);
+labRenderer.shadowMap.enabled = true;
+labContainer.appendChild(labRenderer.domElement);
+
+const labControls = new THREE.OrbitControls(labCamera, labRenderer.domElement);
+labControls.enableDamping = true; labControls.dampingFactor = 0.08;
+labControls.minDistance = 3.5; labControls.maxDistance = 14;
+labControls.maxPolarAngle = Math.PI*0.49;
+labControls.target.set(0.2, 0.5, 0);
+
+const labAmbient = new THREE.AmbientLight(0xfff2d8, 0.55);
+labScene.add(labAmbient);
+const labSun = new THREE.DirectionalLight(0xfff2d8, 0.9);
+labSun.position.set(5,8,4); labSun.castShadow = true;
+labSun.shadow.mapSize.set(1024,1024);
+labScene.add(labSun);
+
+/* board */
+const labBoardMat = new THREE.MeshStandardMaterial({color:0xece3ce, roughness:0.85});
+const labBoard = new THREE.Mesh(new THREE.BoxGeometry(5.6,0.16,2.8), labBoardMat);
+labBoard.position.set(0,0,0); labBoard.receiveShadow = true;
+labBoard.userData = {name:'Breadboard / Base Platform', def:'A reusable mounting board with internal power and ground rails, used to hold and connect electronic parts without soldering.', func:'Physically supports every component here and shares power/ground across them so the sensor, MCU, and dimmer can all be wired together.'};
+labScene.add(labBoard);
+
+const labBenchMat = new THREE.MeshStandardMaterial({color:0x2a1d17, roughness:0.9});
+const labBench = new THREE.Mesh(new THREE.BoxGeometry(8,0.3,4.4), labBenchMat);
+labBench.position.set(0,-0.23,0); labBench.receiveShadow = true;
+labScene.add(labBench);
+
+function labCopperPin(x,y,z,parent){
+  const m = new THREE.Mesh(new THREE.CylinderGeometry(0.025,0.025,0.08,8), new THREE.MeshStandardMaterial({color:0xb98a3d, metalness:0.6, roughness:0.3}));
+  m.position.set(x,y,z); parent.add(m);
+}
+
+/* ---- Power source (battery pack) ---- */
+const labPower = new THREE.Group(); labPower.position.set(-2.55,0.08,0.75);
+labPower.userData = {name:'Power Source', def:'mao ni siya ang source sa energy.', func:'mag hatag ni siya ug energy sa tanan parts aron mo gana ang mga parts.'};
+const labPowerBody = new THREE.Mesh(new THREE.BoxGeometry(0.62,0.32,0.42), new THREE.MeshStandardMaterial({color:0x2f6b3a}));
+labPowerBody.position.y=0.16; labPowerBody.castShadow=true; labPower.add(labPowerBody);
+const labPowerCap = new THREE.Mesh(new THREE.CylinderGeometry(0.05,0.05,0.06,12), new THREE.MeshStandardMaterial({color:0xd8c8a0, metalness:0.6}));
+labPowerCap.position.set(0.2,0.35,0); labPower.add(labPowerCap);
+const labPowerStripe = new THREE.Mesh(new THREE.BoxGeometry(0.63,0.05,0.43), new THREE.MeshStandardMaterial({color:0xffcf5c}));
+labPowerStripe.position.y=0.24; labPower.add(labPowerStripe);
+labScene.add(labPower);
+
+/* ---- Temperature sensor (thermistor) ---- */
+const labSensor = new THREE.Group(); labSensor.position.set(-2.0,0.08,-0.7);
+labSensor.userData = {name:'Temperature Sensor (Thermistor)', def:'maka detect ni siya ug temperature, which is perfect kaayo para sa project.', func:'sya ang mag detect sa temperature para iyahang e send kay microcontroller.'};
+const labSensorBase = new THREE.Mesh(new THREE.CylinderGeometry(0.2,0.2,0.09,20), new THREE.MeshStandardMaterial({color:0xefe6c8}));
+labSensorBase.position.y=0.045; labSensorBase.castShadow=true; labSensor.add(labSensorBase);
+const labSensorBead = new THREE.Mesh(new THREE.SphereGeometry(0.09,16,16), new THREE.MeshStandardMaterial({color:0x8a4a2a, roughness:0.5}));
+labSensorBead.position.y=0.14; labSensor.add(labSensorBead);
+labScene.add(labSensor);
+const labSensorRing = new THREE.Mesh(new THREE.RingGeometry(0.26,0.32,32), new THREE.MeshBasicMaterial({color:0xff8a3d, transparent:true, opacity:0}));
+labSensorRing.rotation.x=-Math.PI/2; labSensorRing.position.set(-2.0,0.15,-0.7); labScene.add(labSensorRing);
+
+/* ---- MCU / comparator ---- */
+const labMcu = new THREE.Group(); labMcu.position.set(-0.5,0.08,-0.2);
+labMcu.userData = {name:'Microcontroller / Comparator (Arduino-class)', def:'gamay ni sya na chip, para mag act ni siya as communicator.', func:'sya ang mag communicate sa tanang parts sya mag sugo kung unsa ang dapat buhaton sa bulb.'};
+const labMcuBoard = new THREE.Mesh(new THREE.BoxGeometry(1.5,0.1,1.0), new THREE.MeshStandardMaterial({color:0x0e4d3b}));
+labMcuBoard.position.y=0.05; labMcuBoard.castShadow=true; labMcu.add(labMcuBoard);
+const labMcuChip = new THREE.Mesh(new THREE.BoxGeometry(0.48,0.08,0.48), new THREE.MeshStandardMaterial({color:0x0a0a0a}));
+labMcuChip.position.set(0,0.13,0); labMcu.add(labMcuChip);
+const labMcuLed = new THREE.Mesh(new THREE.SphereGeometry(0.045,10,10), new THREE.MeshStandardMaterial({color:0x3a5548, emissive:0x000000}));
+labMcuLed.position.set(0.56,0.13,-0.36); labMcu.add(labMcuLed);
+for(let i=0;i<5;i++) labCopperPin(-0.66,0.11,-0.38+i*0.19,labMcu);
+for(let i=0;i<5;i++) labCopperPin(0.66,0.11,-0.38+i*0.19,labMcu);
+labScene.add(labMcu);
+
+/* ---- Brightness controller (dimmer / PWM module) ---- */
+const labDimmer = new THREE.Group(); labDimmer.position.set(0.95,0.08,0.55);
+labDimmer.userData = {name:'Brightness Controller (Dimmer / PWM Module)', def:'module ni siya nga mag limit sa energy nga e distribute sa bulb, acting as limitator.', func:'ma minaw ni siya sa gi ingon sa microcontroller, sya ang maka adjust na sa brightness sa bulb base sa kainit.'};
+const labDimmerBody = new THREE.Mesh(new THREE.BoxGeometry(0.85,0.48,0.65), new THREE.MeshStandardMaterial({color:0xb0522f}));
+labDimmerBody.position.y=0.24; labDimmerBody.castShadow=true; labDimmer.add(labDimmerBody);
+const labDimmerChip = new THREE.Mesh(new THREE.BoxGeometry(0.56,0.13,0.38), new THREE.MeshStandardMaterial({color:0x6f2f1a}));
+labDimmerChip.position.set(0,0.5,0); labDimmer.add(labDimmerChip);
+const labDimmerLed = new THREE.Mesh(new THREE.SphereGeometry(0.05,10,10), new THREE.MeshStandardMaterial({color:0x4fd66a, emissive:0x2a9c44, emissiveIntensity:0.8}));
+labDimmerLed.position.set(0.28,0.5,-0.15); labDimmer.add(labDimmerLed);
+// small bar that rises/falls with duty cycle
+const labDimmerBarTrack = new THREE.Mesh(new THREE.BoxGeometry(0.08,0.4,0.08), new THREE.MeshStandardMaterial({color:0x2c1c10}));
+labDimmerBarTrack.position.set(-0.28,0.7,0); labDimmer.add(labDimmerBarTrack);
+const labDimmerBar = new THREE.Mesh(new THREE.BoxGeometry(0.1,0.4,0.1), new THREE.MeshStandardMaterial({color:0xffcf5c, emissive:0xffcf5c, emissiveIntensity:0.5}));
+labDimmerBar.position.set(-0.28,0.7,0); labDimmer.add(labDimmerBar);
+labScene.add(labDimmer);
+
+/* ---- Bulb / lamp (the output) ---- */
+const MAX_WATTS_3D = 60;
+const labLamp = new THREE.Group(); labLamp.position.set(2.35,0.08,0.25);
+labLamp.userData = {name:'Electric Bulb', def:'The load being protected by the whole circuit — it produces both light and heat, and heat is exactly what this system is watching.', func:'Runs at full brightness until it gets too hot, then dims in steps as the controller throttles its power — trading light output for safety.'};
+const labLampBase = new THREE.Mesh(new THREE.CylinderGeometry(0.22,0.26,0.11,20), new THREE.MeshStandardMaterial({color:0x4a3a28}));
+labLampBase.position.y=0.055; labLampBase.castShadow=true; labLamp.add(labLampBase);
+const labPole = new THREE.Mesh(new THREE.CylinderGeometry(0.032,0.032,1.35,12), new THREE.MeshStandardMaterial({color:0x5a4a38}));
+labPole.position.y=0.75; labLamp.add(labPole);
+const labSocket = new THREE.Mesh(new THREE.CylinderGeometry(0.1,0.12,0.2,16), new THREE.MeshStandardMaterial({color:0x2c2419}));
+labSocket.position.y=1.45; labLamp.add(labSocket);
+for(let i=0;i<4;i++){
+  const ridge = new THREE.Mesh(new THREE.TorusGeometry(0.105,0.011,6,20), new THREE.MeshStandardMaterial({color:0xb9b09a, metalness:0.7, roughness:0.3}));
+  ridge.rotation.x=Math.PI/2; ridge.position.y=1.39+i*0.045; labLamp.add(ridge);
+}
+const labGlassMat = new THREE.MeshPhysicalMaterial({color:0xfff3d0, transparent:true, opacity:0.75, roughness:0.15, transmission:0.6, emissive:0xffcf5c, emissiveIntensity:0.9});
+const labGlass = new THREE.Mesh(new THREE.SphereGeometry(0.29,24,20), labGlassMat);
+labGlass.position.y=1.78; labLamp.add(labGlass);
+const labFilamentMat = new THREE.MeshStandardMaterial({color:0x8a6a3a, emissive:0xffb020, emissiveIntensity:1.5});
+const labFilament = new THREE.Mesh(new THREE.TorusKnotGeometry(0.1,0.018,60,8,2,3), labFilamentMat);
+labFilament.position.y=1.78; labFilament.rotation.x=Math.PI/2; labLamp.add(labFilament);
+labScene.add(labLamp);
+const labBulbLight = new THREE.PointLight(0xffcf5c, 1.5, 4.2, 2);
+labBulbLight.position.set(2.35,1.78,0.25);
+labScene.add(labBulbLight);
+
+function labUpdateBulbBrightness(pct){
+  const b = Math.max(0.05, pct/100);
+  labBulbLight.intensity = 1.6*b;
+  labGlass.material.emissiveIntensity = 0.9*b;
+  labGlass.material.opacity = 0.35 + 0.4*b;
+  labFilamentMat.emissiveIntensity = 1.5*b;
+  labDimmerLed.material.color.setRGB(0.2+0.6*(1-b), 0.75*b+0.1, 0.15);
+  labDimmerLed.material.emissive.setRGB(0.2+0.6*(1-b), 0.75*b+0.1, 0.15);
+  labDimmerBar.scale.y = Math.max(0.06,b);
+  labDimmerBar.position.y = 0.7 - (0.4*(1-b))/2;
+}
+function labSetBrightness(pct){ labUpdateBulbBrightness(pct); labUpdateManualless(); }
+function labUpdateManualless(){ /* placeholder kept for symmetry with flow calls */ }
+
+/* ---- wires ---- */
+function labWireCurve(a,b,liftY){
+  const mid = new THREE.Vector3((a.x+b.x)/2,(a.y+b.y)/2+liftY,(a.z+b.z)/2);
+  return new THREE.QuadraticBezierCurve3(new THREE.Vector3(a.x,a.y,a.z), mid, new THREE.Vector3(b.x,b.y,b.z));
+}
+function labAddWire(curve,color,isPower){
+  const geo = new THREE.TubeGeometry(curve,20,0.018,8,false);
+  const mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({color, emissive:color, emissiveIntensity:0.15}));
+  mesh.userData = isPower
+    ? {name:'Power Wire', def:'A conductor carrying higher-current supply power rather than a data signal.', func:'Carries switched, throttled power from the source (via the dimmer) to the bulb.'}
+    : {name:'Signal Wire', def:'A conductor carrying a low-current data or control signal between components.', func:'Carries the sensor reading, or a brightness command — never the load power itself.'};
+  labScene.add(mesh);
+  return curve;
+}
+const labCurvePowerLamp = labAddWire(labWireCurve(new THREE.Vector3(-2.25,0.3,0.75), new THREE.Vector3(2.05,0.15,0.3), 0.5), 0xd64545, true);
+const labCurveSensorMcu = labAddWire(labWireCurve(new THREE.Vector3(-1.75,0.2,-0.65), new THREE.Vector3(-1.2,0.2,-0.25), 0.3), 0xe6b93a, false);
+const labCurveMcuDimmer = labAddWire(labWireCurve(new THREE.Vector3(0.2,0.2,0.05), new THREE.Vector3(0.55,0.2,0.25), 0.3), 0xe6b93a, false);
+const labCurveDimmerLamp = labAddWire(labWireCurve(new THREE.Vector3(1.35,0.45,0.55), new THREE.Vector3(2.1,0.15,0.25), 0.4), 0xd64545, true);
+
+/* pulse dot */
+const labPulseDot = new THREE.Mesh(new THREE.SphereGeometry(0.055,12,12), new THREE.MeshBasicMaterial({color:0xffcf5c}));
+labPulseDot.visible=false; labScene.add(labPulseDot);
+const labCurveMap = {sensorMcu:labCurveSensorMcu, mcuDimmer:labCurveMcuDimmer, dimmerLamp:labCurveDimmerLamp};
+function labFirePulse(key, onDone){
+  const curve = labCurveMap[key];
+  labPulseDot.visible=true;
+  const start = performance.now(); const dur=420;
+  function step(now){
+    const t = Math.min(1,(now-start)/dur);
+    const p = curve.getPointAt(t);
+    labPulseDot.position.copy(p);
+    if(t<1) requestAnimationFrame(step);
+    else { labPulseDot.visible=false; if(onDone) onDone(); }
+  }
+  requestAnimationFrame(step);
+}
+
+function labSensorPingAnim(){
+  labSensorRing.material.opacity=0.9; labSensorRing.scale.set(1,1,1);
+  const start=performance.now(); const dur=650;
+  function step(now){
+    const t=Math.min(1,(now-start)/dur);
+    labSensorRing.scale.set(1+t*1.7,1+t*1.7,1);
+    labSensorRing.material.opacity = 0.9*(1-t);
+    if(t<1) requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+function labMcuBlink(){
+  labMcuLed.material.color.set(0xff8a3d); labMcuLed.material.emissive.set(0xff8a3d);
+  setTimeout(()=>{ labMcuLed.material.color.set(0x3a5548); labMcuLed.material.emissive.set(0x000000); },480);
+}
+
+/* ---- raycaster click-to-inspect ---- */
+const labRaycaster = new THREE.Raycaster();
+const labMouse = new THREE.Vector2();
+const labPointerDownPos = {x:0, y:0};
+const labInfoPanel = document.getElementById('labInfoPanel');
+const labInfoName = document.getElementById('labInfoName');
+const labInfoDef = document.getElementById('labInfoDef');
+const labInfoFunc = document.getElementById('labInfoFunc');
+document.getElementById('labInfoClose').addEventListener('click', ()=> labInfoPanel.classList.remove('show'));
+
+labRenderer.domElement.addEventListener('pointerdown', (e)=>{
+  labPointerDownPos.x = e.clientX; labPointerDownPos.y = e.clientY;
+});
+labRenderer.domElement.addEventListener('pointerup', (e)=>{
+  const dx = e.clientX - labPointerDownPos.x, dy = e.clientY - labPointerDownPos.y;
+  if(Math.sqrt(dx*dx+dy*dy) > 6) return;
+  const rect = labRenderer.domElement.getBoundingClientRect();
+  labMouse.x = ((e.clientX-rect.left)/rect.width)*2-1;
+  labMouse.y = -((e.clientY-rect.top)/rect.height)*2+1;
+  labRaycaster.setFromCamera(labMouse, labCamera);
+  const hits = labRaycaster.intersectObjects(labScene.children, true);
+  for(const h of hits){
+    let obj = h.object;
+    while(obj && !obj.userData.name) obj = obj.parent;
+    if(obj && obj.userData.name){
+      labInfoName.textContent = obj.userData.name;
+      labInfoDef.textContent = obj.userData.def;
+      labInfoFunc.textContent = obj.userData.func;
+      labInfoPanel.classList.add('show');
+      return;
+    }
+  }
+});
+
+function labAnimate(){
+  requestAnimationFrame(labAnimate);
+  labControls.update();
+  labRenderer.render(labScene,labCamera);
+}
+labAnimate();
+
+window.addEventListener('resize', ()=>{
+  labCamera.aspect = labContainer.clientWidth/420;
+  labCamera.updateProjectionMatrix();
+  labRenderer.setSize(labContainer.clientWidth,420);
+});
+
+/* init */
+labUpdateEnvVisual(38); labResetFlow();
+</script>
+
+<script>
+/* ============================================================
+   ONE SLIDER TO RULE THEM ALL — drives both simulation 1 (the
+   room + graph) and simulation 2 (the 3D lab) at the same time.
+   ============================================================ */
+const masterSliderRef = document.getElementById('masterSlider');
+const masterPctRef = document.getElementById('masterPct');
+const labPctVisibleRef = document.getElementById('labPctVisible');
+
+function syncAll(val){
+  val = Number(val);
+  masterPctRef.textContent = val + '°C';
+
+  labSlider.value = val;
+  labPct.textContent = val + '°C';
+  if (labPctVisibleRef) labPctVisibleRef.textContent = val + '°C';
+
+  const result = update(val);       // drive simulation 1
+  pushHistory(val, result.brightness);
+  drawGraph();
+
+  labTempVal = val;
+  labUpdateEnvVisual(val);          // drive simulation 2 visuals
+}
+
+masterSliderRef.addEventListener('input', e => syncAll(e.target.value));
+masterSliderRef.addEventListener('change', e => labEvaluate(Number(e.target.value)));
+
+syncAll(masterSliderRef.value);
+</script>
+
+</body>
+</html>
